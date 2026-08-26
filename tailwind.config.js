@@ -1,0 +1,68 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  theme: {
+    extend: {
+      colors: {
+        // Sincronía Latina design system
+        primary: "#00288e",
+        "primary-container": "#1e40af",
+        "on-primary": "#ffffff",
+        "on-primary-container": "#a8b8ff",
+        "inverse-primary": "#b8c4ff",
+        secondary: "#565e74",
+        "secondary-container": "#dae2fd",
+        tertiary: "#611e00",
+        "tertiary-container": "#872d00",
+        background: "#f8f9ff",
+        "background-alt": "#F8FAFC",
+        surface: "#FFFFFF",
+        "surface-dim": "#cbdbf5",
+        "surface-bright": "#f8f9ff",
+        "surface-container-lowest": "#ffffff",
+        "surface-container-low": "#eff4ff",
+        "surface-container": "#e5eeff",
+        "surface-container-high": "#dce9ff",
+        "surface-container-highest": "#d3e4fe",
+        "on-surface": "#0b1c30",
+        "on-surface-variant": "#444653",
+        "inverse-surface": "#213145",
+        "inverse-on-surface": "#eaf1ff",
+        outline: "#757684",
+        "outline-variant": "#c4c5d5",
+        border: "#E2E8F0",
+        warning: { 500: "#D97706" },
+        success: { 600: "#059669" },
+        danger: { 600: "#DC2626" },
+        navy: "#0F172A",
+      },
+      fontFamily: {
+        sans: ["Inter", "system-ui", "sans-serif"],
+      },
+      fontSize: {
+        "headline-lg": ["30px", { lineHeight: "36px", fontWeight: "700", letterSpacing: "-0.02em" }],
+        "headline-md": ["24px", { lineHeight: "32px", fontWeight: "600", letterSpacing: "-0.01em" }],
+        "headline-sm": ["18px", { lineHeight: "28px", fontWeight: "600" }],
+        "body-lg": ["16px", { lineHeight: "24px", fontWeight: "400" }],
+        "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }],
+        "body-sm": ["12px", { lineHeight: "16px", fontWeight: "400" }],
+        "label-md": ["12px", { lineHeight: "16px", fontWeight: "600", letterSpacing: "0.05em" }],
+        "table-data": ["13px", { lineHeight: "18px", fontWeight: "400" }],
+      },
+      borderRadius: {
+        sm: "0.125rem",
+        DEFAULT: "0.25rem",
+        md: "0.375rem",
+        lg: "0.5rem",
+        xl: "0.75rem",
+      },
+      boxShadow: {
+        modal: "0 10px 30px rgba(11, 28, 48, 0.10)",
+      },
+      maxWidth: {
+        "page-max": "1440px",
+      },
+    },
+  },
+  plugins: [],
+};

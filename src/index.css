@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-background text-on-surface font-sans antialiased;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  ::selection {
+    @apply bg-primary-container text-on-primary-container;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-surface border border-border rounded-lg;
+  }
+  .input {
+    @apply w-full rounded-md border border-border bg-surface px-3 py-2 text-body-md text-on-surface
+      placeholder:text-on-surface-variant/60 outline-none transition;
+  }
+  .input:focus {
+    @apply border-primary ring-2 ring-primary/20;
+  }
+  .label {
+    @apply block text-label-md uppercase tracking-wider text-on-surface-variant mb-1;
+  }
+}
+
+/* Scrollbar sutil acorde al design system */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #c4c5d5;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
