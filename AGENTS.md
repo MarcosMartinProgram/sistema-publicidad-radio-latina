@@ -130,6 +130,14 @@ de fast-refresh). Build a `dist/` correcto (98 módulos).
 - `npm run build` → build de producción exitoso.
 - `npm run lint` → sin errores.
 
+### Corrección de dependencias (audit npm) — 2026-08-26
+- `npm audit` reportaba 4 vulns: esbuild (vía vite), react-router (open redirect + constructor
+  injection). Todas de scope dev/SSR, no explotables en el SPA (sin SSR).
+- Se resolvió con **upgrade agresivo**: `vite@8.2.2` + `react-router-dom@7.18.2` +
+  `@vitejs/plugin-react@5` (requerido por vite 8).
+- Verificación: `npm install` → `found 0 vulnerabilities` · `npm run build` OK (87 módulos, Vite 8) ·
+  `npm run lint` 0 errores (1 warning fast-refresh) · dev server HTTP 200.
+
 ### Lo que falta / próximos pasos
 - [ ] Que el usuario cree el proyecto en Supabase, corra `supabase/schema.sql` y pegue `.env`.
 - [ ] Conectar a un backend real ya provisto por el usuario (si cambia de Supabase).
