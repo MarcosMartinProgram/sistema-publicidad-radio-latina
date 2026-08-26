@@ -51,6 +51,11 @@ VITE_SUPABASE_ANON_KEY=tu-anon-key
 
 > `VITE_SEED_ENABLED=true` habilita el botón "Generar datos de ejemplo" del dashboard.
 
+> ⚠️ **Importante:** el archivo `.env` **NO se sube al repositorio** (está en `.gitignore`).
+> Al clonar el proyecto en otra máquina hay que recrearlo con esos dos valores:
+> la **Project URL** de Supabase y la **publishable/anon key**. Nunca subas ni compartas
+> la `service_role`. La siguiente sección explica dónde obtener cada uno.
+
 ### 5. Levantar la app
 
 ```bash
