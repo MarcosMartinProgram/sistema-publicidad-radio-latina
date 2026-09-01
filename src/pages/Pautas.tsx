@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Card } from "@/components/ui/Card";
 import { Table } from "@/components/ui/Table";
-import { EstatusPautaBadge } from "@/components/ui/Badge";
+import { EstatusPautaMensualBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input, Select } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
@@ -11,12 +11,12 @@ import { WhatsAppButton } from "@/components/ui/WhatsApp";
 import {
   listarClientes,
   listarPautasConCliente,
+  listarCobrosConPauta,
   crearPauta,
-  actualizarEstadoPauta,
   eliminarPauta,
 } from "@/lib/api";
-import { formatAR$, formatFecha, hoyISO, parseMonto, sumarDias } from "@/lib/utils";
-import type { Cliente, Pauta } from "@/lib/types";
+import { formatAR$, formatFecha, hoyISO, parseMonto, sumarDias, estadoPautaMensual } from "@/lib/utils";
+import type { Cliente, Cobro, Pauta } from "@/lib/types";
 
 interface FormState {
   cliente_id: string;
@@ -31,6 +31,7 @@ export function Pautas() {
   const { user } = useAuth();
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [pautas, setPautas] = useState<Pauta[]>([]);
+  const [cobros, setCobros] = useState<Cobro[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<FormState>({
@@ -46,12 +47,14 @@ export function Pautas() {
 
   const cargar = async () => {
     setLoading(true);
-    const [{ data: cl }, { data: pa }] = await Promise.all([
+    const [{ data: cl }, { data: pa }, { data: cob }] = await Promise.all([
       listarClientes(),
       listarPautasConCliente(),
+      listarCobrosConPauta(),
     ]);
     setClientes(cl ?? []);
     setPautas(pa ?? []);
+    setCobros(cob ?? []);
     setLoading(false);
   };
 
@@ -61,6 +64,7 @@ export function Pautas() {
 
   const nombreCliente = (id: string) => clientes.find((c) => c.id === id)?.nombre ?? "—";
   const telefonoCliente = (id: string) => clientes.find((c) => c.id === id)?.telefono ?? "";
+  const estadoMensual = (p: Pauta) => estadoPautaMensual(p, cobros.filter((c) => c.pauta_id === p.id));
 
   const monto = form.pases * form.tarifa || 0;
 
@@ -108,11 +112,6 @@ export function Pautas() {
     }
   };
 
-  const cambiarEstado = async (p: Pauta, estado: Pauta["estado"]) => {
-    await actualizarEstadoPauta(p.id, estado);
-    await cargar();
-  };
-
   const borrar = async (p: Pauta) => {
     if (!confirm(`¿Eliminar la pauta "${p.nombre}"?`)) return;
     await eliminarPauta(p.id);
@@ -157,7 +156,7 @@ export function Pautas() {
               header: "Periodo",
               render: (p: Pauta) => `${formatFecha(p.fecha_inicio)} → ${formatFecha(p.fecha_fin)}`,
             },
-            { key: "estado", header: "Estado", render: (p: Pauta) => <EstatusPautaBadge estado={p.estado} /> },
+            { key: "estado", header: "Estado", render: (p: Pauta) => <EstatusPautaMensualBadge estado={estadoMensual(p)} /> },
             {
               key: "acciones",
               header: "",
@@ -166,26 +165,9 @@ export function Pautas() {
                 <div className="flex justify-end gap-1">
                   <WhatsAppButton
                     telefono={telefonoCliente(p.cliente_id)}
-                    mensaje={`Hola ${nombreCliente(p.cliente_id).split(" ")[0] || "cliente"}! 👋 Radio Latina Du Graty 102.3 Mhz: tu pauta "${p.nombre}" está ${p.estado}.`}
+                    mensaje={`Hola ${nombreCliente(p.cliente_id).split(" ")[0] || "cliente"}! 👋 Radio Latina Du Graty 102.3 Mhz: tu pauta "${p.nombre}" está ${estadoMensual(p) === "al_dia" ? "al día" : estadoMensual(p)}.`}
                     label="WhatsApp"
                   />
-                  {p.estado !== "finalizada" ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => cambiarEstado(p, "finalizada")}
-                    >
-                      Finalizar
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => cambiarEstado(p, "activa")}
-                    >
-                      Reactivar
-                    </Button>
-                  )}
                   <Button variant="ghost" size="sm" className="text-danger-600" onClick={() => borrar(p)}>
                     Borrar
                   </Button>

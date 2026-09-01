@@ -2,20 +2,20 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Card } from "@/components/ui/Card";
 import { Table } from "@/components/ui/Table";
-import { EstatusCobroBadge, EstatusPautaBadge } from "@/components/ui/Badge";
+import { EstatusCobroBadge, EstatusPautaMensualBadge } from "@/components/ui/Badge";
 import { StatCard } from "@/components/ui/StatCard";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Feedback";
 import { WhatsAppButton, RecordatorioMsg } from "@/components/ui/WhatsApp";
 import { listarClientes, listarCobrosConPauta, listarPautasConCliente, generarDatosDemo } from "@/lib/api";
-import { formatAR$, formatFecha, esVencido } from "@/lib/utils";
-import type { Cliente, Cobro, Pauta } from "@/lib/types";
+import { formatAR$, formatFecha, estadoPautaMensual, estadoCobroEfectivo } from "@/lib/utils";
+import type { Cliente, Cobro, CobroConPauta, Pauta } from "@/lib/types";
 
 export function Dashboard() {
   const { user } = useAuth();
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [pautas, setPautas] = useState<Pauta[]>([]);
-  const [cobros, setCobros] = useState<Cobro[]>([]);
+  const [cobros, setCobros] = useState<CobroConPauta[]>([]);
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);
   const [seedError, setSeedError] = useState<string | null>(null);
@@ -55,16 +55,19 @@ export function Dashboard() {
   };
 
   const stats = useMemo(() => {
-    const pendiente = cobros.filter((c) => c.estado === "pendiente");
-    const vencido = cobros.filter((c) => c.estado === "vencido" || esVencido(c.fecha_vencimiento));
-    const aprobado = cobros.filter((c) => c.estado === "aprobado");
-    const totalCobros = cobros.reduce((s, c) => s + Number(c.monto), 0);
+    const efectivo = (c: Cobro) => estadoCobroEfectivo(c);
+    const pendiente = cobros.filter((c) => efectivo(c) === "pendiente");
+    const aprobado = cobros.filter((c) => efectivo(c) === "aprobado");
     const totalAprobado = aprobado.reduce((s, c) => s + Number(c.monto), 0);
     const porCobrar = cobros
-      .filter((c) => c.estado === "pendiente" || c.estado === "vencido")
+      .filter((c) => efectivo(c) === "pendiente" || efectivo(c) === "vencido")
       .reduce((s, c) => s + Number(c.monto), 0);
-    return { pendiente, vencido, totalCobros, totalAprobado, porCobrar };
-  }, [cobros]);
+    const pautasVencidas = pautas.filter(
+      (p) => estadoPautaMensual(p, cobros.filter((c) => c.pauta_id === p.id)) === "vencida",
+    );
+    const totalVencidoPautas = pautasVencidas.reduce((s, c) => s + Number(c.monto_total), 0);
+    return { pendiente, totalAprobado, porCobrar, totalVencidoPautas, pautasVencidas };
+  }, [cobros, pautas]);
 
   if (loading) return <Spinner label="Cargando dashboard..." />;
 
@@ -106,21 +109,21 @@ export function Dashboard() {
         />
         <StatCard
           label="Vencidos"
-          value={formatAR$(stats.vencido.reduce((s, c) => s + Number(c.monto), 0))}
-          hint={`${stats.vencido.length} en mora`}
+          value={formatAR$(stats.totalVencidoPautas)}
+          hint={`${stats.pautasVencidas.length} pautas en mora`}
           tone="danger"
         />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <PautasRecientes pautas={pautas} clientes={clientes} />
+        <PautasRecientes pautas={pautas} clientes={clientes} cobros={cobros} />
         <CobrosPendientes cobros={cobros} className="lg:col-span-2" />
       </div>
     </div>
   );
 }
 
-function PautasRecientes({ pautas, clientes }: { pautas: Pauta[]; clientes: Cliente[] }) {
+function PautasRecientes({ pautas, clientes, cobros }: { pautas: Pauta[]; clientes: Cliente[]; cobros: Cobro[] }) {
   const nombre = (id: string) => clientes.find((c) => c.id === id)?.nombre ?? "—";
   const recientes = pautas.slice(0, 5);
   return (
@@ -134,7 +137,11 @@ function PautasRecientes({ pautas, clientes }: { pautas: Pauta[]; clientes: Clie
           {
             key: "estado",
             header: "Estado",
-            render: (p: Pauta) => <EstatusPautaBadge estado={p.estado} />,
+            render: (p: Pauta) => (
+              <EstatusPautaMensualBadge
+                estado={estadoPautaMensual(p, cobros.filter((c) => c.pauta_id === p.id))}
+              />
+            ),
           },
         ]}
       />
@@ -142,8 +149,11 @@ function PautasRecientes({ pautas, clientes }: { pautas: Pauta[]; clientes: Clie
   );
 }
 
-function CobrosPendientes({ cobros, className }: { cobros: Cobro[]; className?: string }) {
-  const pendientes = cobros.filter((c) => c.estado !== "aprobado").slice(0, 6);
+function CobrosPendientes({ cobros, className }: { cobros: CobroConPauta[]; className?: string }) {
+  const pendientes = cobros
+    .map((c) => ({ ...c, estado: estadoCobroEfectivo(c) }))
+    .filter((c) => c.estado !== "aprobado")
+    .slice(0, 6);
   return (
     <Card title="Semáforo de cobros" className={className}>
       <Table
@@ -154,7 +164,7 @@ function CobrosPendientes({ cobros, className }: { cobros: Cobro[]; className?: 
           {
             key: "pauta",
             header: "Concepto",
-            render: (c: Cobro) => (c as unknown as Cobro & { pautas?: { nombre: string } }).pautas?.nombre ?? "—",
+            render: (c: CobroConPauta) => c.pautas?.nombre ?? "—",
           },
           {
             key: "vto",
@@ -170,13 +180,13 @@ function CobrosPendientes({ cobros, className }: { cobros: Cobro[]; className?: 
             key: "accion",
             header: "",
             className: "text-right",
-            render: (c: Cobro) => (
+            render: (c: CobroConPauta) => (
               <WhatsAppButton
-                telefono="5491100000000"
+                telefono={c.pautas?.clientes?.telefono ?? ""}
                 mensaje={RecordatorioMsg({
-                  cliente: "el cliente",
+                  cliente: c.pautas?.clientes?.nombre ?? "el cliente",
                   monto: formatAR$(Number(c.monto)),
-                  pauta: (c as unknown as Cobro & { pautas?: { nombre: string } }).pautas?.nombre ?? "tu pauta",
+                  pauta: c.pautas?.nombre ?? "tu pauta",
                 })}
                 label="Recordatorio"
               />

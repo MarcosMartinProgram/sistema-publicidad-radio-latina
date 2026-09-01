@@ -1,24 +1,21 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { WhatsAppButton, RecordatorioMsg } from "@/components/ui/WhatsApp";
 
 describe("WhatsAppButton", () => {
-  it("abre wa.me al hacer click con el teléfono normalizado y el mensaje", async () => {
-    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+  it("es un link directo a wa.me con el teléfono normalizado y el mensaje", () => {
     render(<WhatsAppButton telefono="1144556677" mensaje="Hola!" />);
-    await userEvent.click(screen.getByRole("button"));
-    const [url, target] = openSpy.mock.calls[0];
-    expect(typeof url).toBe("string");
-    expect(url as string).toMatch(/^https:\/\/wa\.me\/541144556677\?text=/);
-    expect(decodeURIComponent(url as string)).toContain("Hola!");
-    expect(target).toBe("_blank");
-    openSpy.mockRestore();
+    const link = screen.getByRole("link", { name: /whatsapp/i });
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    const url = link.getAttribute("href") ?? "";
+    expect(url).toMatch(/^https:\/\/wa\.me\/541144556677\?text=/);
+    expect(decodeURIComponent(url)).toContain("Hola!");
   });
 
   it("usa el label por defecto y respeta uno custom", () => {
     render(<WhatsAppButton telefono="1144556677" mensaje="x" label="Recordar" />);
-    expect(screen.getByRole("button", { name: /recordar/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /recordar/i })).toBeInTheDocument();
   });
 });
 

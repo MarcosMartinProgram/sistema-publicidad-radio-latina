@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import {
   formatAR$,
   parseMonto,
@@ -10,6 +10,8 @@ import {
   abrirWhatsApp,
   initiales,
   esVencido,
+  estadoPautaMensual,
+  estadoCobroEfectivo,
 } from "@/lib/utils";
 
 describe("formatAR$", () => {
@@ -161,5 +163,99 @@ describe("esVencido", () => {
 
   it("es false con fecha inválida", () => {
     expect(esVencido("no-es-fecha")).toBe(false);
+  });
+});
+
+describe("estadoPautaMensual", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const cobro = (estado: "aprobado" | "pendiente" | "vencido", fechaPago: string) =>
+    ({ estado, fecha_pago: fechaPago }) as Parameters<typeof estadoPautaMensual>[1][number];
+
+  const pauta = (fechaInicio = "2026-06-01") =>
+    ({ fecha_inicio: fechaInicio, fecha_fin: "2026-12-31" }) as Parameters<typeof estadoPautaMensual>[0];
+
+  it("está al día si cada mes (pasados y actual) tiene cobro aprobado", () => {
+    vi.setSystemTime(new Date("2026-09-15T12:00:00"));
+    const cobros = [
+      cobro("aprobado", "2026-06-05"),
+      cobro("aprobado", "2026-07-05"),
+      cobro("aprobado", "2026-08-05"),
+      cobro("aprobado", "2026-09-03"),
+    ];
+    expect(estadoPautaMensual(pauta("2026-06-01"), cobros)).toBe("al_dia");
+  });
+
+  it("queda pendiente entre el 1 y el 10 del mes actual si todos los meses pasados están pagos", () => {
+    vi.setSystemTime(new Date("2026-09-05T12:00:00"));
+    const cobros = [
+      cobro("aprobado", "2026-06-05"),
+      cobro("aprobado", "2026-07-05"),
+      cobro("aprobado", "2026-08-05"),
+    ];
+    expect(estadoPautaMensual(pauta("2026-06-01"), cobros)).toBe("pendiente");
+  });
+
+  it("queda vencida desde el día 11 sin cobro aprobado del mes actual", () => {
+    vi.setSystemTime(new Date("2026-09-11T12:00:00"));
+    const cobros = [
+      cobro("aprobado", "2026-06-05"),
+      cobro("aprobado", "2026-07-05"),
+      cobro("aprobado", "2026-08-05"),
+    ];
+    expect(estadoPautaMensual(pauta("2026-06-01"), cobros)).toBe("vencida");
+  });
+
+  it("no se autorecupera: si un mes pasado quedó sin pagar queda vencida aunque esté pagado el mes actual", () => {
+    vi.setSystemTime(new Date("2026-09-15T12:00:00"));
+    const cobros = [
+      cobro("aprobado", "2026-06-05"),
+      cobro("aprobado", "2026-08-05"),
+      cobro("aprobado", "2026-09-03"),
+    ];
+    expect(estadoPautaMensual(pauta("2026-06-01"), cobros)).toBe("vencida");
+  });
+
+  it("vuelve a estar al día cuando se paga el mes que faltaba", () => {
+    vi.setSystemTime(new Date("2026-09-15T12:00:00"));
+    const cobros = [
+      cobro("aprobado", "2026-06-05"),
+      cobro("aprobado", "2026-08-05"),
+      cobro("aprobado", "2026-09-03"),
+      cobro("aprobado", "2026-07-20"),
+    ];
+    expect(estadoPautaMensual(pauta("2026-06-01"), cobros)).toBe("al_dia");
+  });
+
+  it("solo considera cobros aprobados", () => {
+    vi.setSystemTime(new Date("2026-09-15T12:00:00"));
+    const cobros = [
+      cobro("aprobado", "2026-06-05"),
+      cobro("aprobado", "2026-07-05"),
+      cobro("aprobado", "2026-08-05"),
+      cobro("pendiente", "2026-09-03"),
+    ];
+    expect(estadoPautaMensual(pauta("2026-06-01"), cobros)).toBe("vencida");
+  });
+});
+
+describe("estadoCobroEfectivo", () => {
+  it("aprobado se mantiene aprobado", () => {
+    expect(estadoCobroEfectivo({ estado: "aprobado", fecha_vencimiento: "2026-01-01" })).toBe("aprobado");
+  });
+
+  it("pendiente con vencimiento ya pasado → vencido", () => {
+    const hoy = new Date();
+    const pasado = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-${String(
+      hoy.getDate() - 5
+    ).padStart(2, "0")}`;
+    expect(estadoCobroEfectivo({ estado: "pendiente", fecha_vencimiento: pasado })).toBe("vencido");
+  });
+
+  it("pendiente con vencimiento futuro o nulo → pendiente", () => {
+    expect(estadoCobroEfectivo({ estado: "pendiente", fecha_vencimiento: "2999-12-31" })).toBe("pendiente");
+    expect(estadoCobroEfectivo({ estado: "pendiente", fecha_vencimiento: null })).toBe("pendiente");
   });
 });

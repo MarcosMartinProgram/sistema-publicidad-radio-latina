@@ -163,4 +163,10 @@ export type Cobro = Database["public"]["Tables"]["cobros"]["Row"];
 export type Perfil = Database["public"]["Tables"]["profiles"]["Row"];
 
 export type PautaConCliente = Pauta & { clientes: Pick<Cliente, "nombre" | "telefono"> | null };
-export type CobroConPauta = Cobro & { pautas: Pick<Pauta, "nombre"> | null };
+export type CobroConPauta = Cobro & {
+  pautas:
+    | (Pick<Pauta, "nombre"> & {
+        clientes: Pick<Cliente, "nombre" | "telefono"> | null;
+      })
+    | null;
+};

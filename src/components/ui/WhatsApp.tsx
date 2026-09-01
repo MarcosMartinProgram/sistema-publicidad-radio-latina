@@ -1,4 +1,4 @@
-import { abrirWhatsApp } from "@/lib/utils";
+import { urlWhatsApp } from "@/lib/utils";
 
 interface WhatsAppIconProps {
   className?: string;
@@ -24,14 +24,15 @@ export function WhatsAppButton({
   className?: string;
 }) {
   return (
-    <button
-      type="button"
-      onClick={() => abrirWhatsApp(telefono, mensaje)}
+    <a
+      href={urlWhatsApp(telefono, mensaje)}
+      target="_blank"
+      rel="noopener noreferrer"
       className={`inline-flex items-center gap-2 rounded-md bg-success-600 px-3 py-1.5 text-body-sm font-semibold text-white transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-success-600/30 ${className}`}
     >
       <WhatsAppIcon />
       {label}
-    </button>
+    </a>
   );
 }
 

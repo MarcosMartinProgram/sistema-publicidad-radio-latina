@@ -1,4 +1,7 @@
 /** Utilidades de formato y dominio. Región: es-AR, moneda ARS. */
+import type { Cobro, Pauta } from "./types";
+
+export type EstadoMensual = "al_dia" | "pendiente" | "vencida";
 
 export function formatAR$(
   value: number,
@@ -36,7 +39,11 @@ export function formatFecha(iso: string): string {
 }
 
 export function hoyISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  const ahora = new Date();
+  const yy = ahora.getFullYear();
+  const mm = String(ahora.getMonth() + 1).padStart(2, "0");
+  const dd = String(ahora.getDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
 }
 
 export function sumarDias(iso: string, dias: number): string {
@@ -77,4 +84,70 @@ export function esVencido(fechaVencimiento: string): boolean {
   const v = new Date(fechaVencimiento);
   if (Number.isNaN(v.getTime())) return false;
   return v < new Date();
+}
+
+/** Mes "AAAA-MM" en hora local de una fecha ISO. */
+export function mesDe(iso: string): string {
+  return iso.slice(0, 7);
+}
+
+/** Lista de meses "AAAA-MM" entre dos fechas, inclusive. */
+function mesesEntre(inicio: string, fin: string): string[] {
+  const [y0, m0] = inicio.split("-").map(Number);
+  const [y1, m1] = fin.split("-").map(Number);
+  const meses: string[] = [];
+  let y = y0;
+  let m = m0;
+  while (y < y1 || (y === y1 && m <= m1)) {
+    meses.push(`${y}-${String(m).padStart(2, "0")}`);
+    m += 1;
+    if (m > 12) {
+      m = 1;
+      y += 1;
+    }
+  }
+  return meses;
+}
+
+/**
+ * Estado mensual de una publicidad recurrente con vencimiento acumulativo.
+ * Cada mes desde `fecha_inicio` vence un pago (del 1 al 10 de cada mes).
+ * - Si algún mes pasado quedó sin cobro aprobado → "vencida", hasta que se
+ *   pague ese mes (no se autorecupera con el pago del mes actual).
+ * - Si todos los meses pasados están pagos y el mes actual todavía no:
+ *   del 1 al 10 → "pendiente"; del 11 en adelante → "vencida".
+ * - Si todos los meses (pasados y actual) están pagos → "al_dia".
+ * La pauta no se finaliza: sigue mes a mes.
+ */
+export function estadoPautaMensual(pauta: Pauta, cobros: Cobro[]): EstadoMensual {
+  const hoy = hoyISO();
+  const mesActual = hoy.slice(0, 7);
+  const dia = Number(hoy.slice(8, 10));
+
+  const pagados = new Set(
+    cobros
+      .filter((c) => c.estado === "aprobado" && c.fecha_pago)
+      .map((c) => mesDe(c.fecha_pago)),
+  );
+
+  const mesInicio = mesDe(pauta.fecha_inicio);
+  const meses = mesesEntre(mesInicio > mesActual ? mesActual : mesInicio, mesActual);
+
+  for (const m of meses) {
+    if (m === mesActual) continue;
+    if (!pagados.has(m)) return "vencida";
+  }
+
+  if (pagados.has(mesActual)) return "al_dia";
+  return dia <= 10 ? "pendiente" : "vencida";
+}
+
+/** Estado efectivo de un cobro: aprueba si está aprobado; si pasó su fecha de
+ *  vencimiento y sigue pendiente → "vencido"; caso contrario → "pendiente". */
+export function estadoCobroEfectivo(
+  cobro: Pick<Cobro, "estado"> & { fecha_vencimiento: string | null }
+): Cobro["estado"] {
+  if (cobro.estado === "aprobado") return "aprobado";
+  if (cobro.fecha_vencimiento && cobro.fecha_vencimiento < hoyISO()) return "vencido";
+  return "pendiente";
 }

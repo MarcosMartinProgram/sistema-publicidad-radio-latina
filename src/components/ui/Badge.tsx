@@ -56,3 +56,17 @@ export function EstatusPautaBadge({ estado }: { estado: string }) {
     </Badge>
   );
 }
+
+export function EstatusPautaMensualBadge({ estado }: { estado: string }) {
+  const map: Record<string, { t: Tone; label: string }> = {
+    al_dia: { t: "success", label: "Al día" },
+    pendiente: { t: "warning", label: "Pendiente" },
+    vencida: { t: "danger", label: "Vencida" },
+  };
+  const m = map[estado] ?? { t: "neutral", label: estado };
+  return (
+    <Badge tone={m.t} dot>
+      {m.label}
+    </Badge>
+  );
+}

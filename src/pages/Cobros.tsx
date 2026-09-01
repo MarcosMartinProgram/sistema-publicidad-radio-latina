@@ -15,7 +15,7 @@ import {
   actualizarEstadoCobro,
   eliminarCobro,
 } from "@/lib/api";
-import { formatAR$, formatFecha, hoyISO, parseMonto, sumarDias } from "@/lib/utils";
+import { formatAR$, formatFecha, hoyISO, parseMonto, sumarDias, estadoCobroEfectivo } from "@/lib/utils";
 import type { Cobro, CobroConPauta, Pauta } from "@/lib/types";
 
 interface FormState {
@@ -118,9 +118,10 @@ export function Cobros() {
   };
 
   const totales = useMemo(() => {
-    const pendiente = cobros.filter((c) => c.estado === "pendiente").reduce((s, c) => s + Number(c.monto), 0);
-    const aprobado = cobros.filter((c) => c.estado === "aprobado").reduce((s, c) => s + Number(c.monto), 0);
-    const vencido = cobros.filter((c) => c.estado === "vencido").reduce((s, c) => s + Number(c.monto), 0);
+    const estado = (c: Cobro) => estadoCobroEfectivo(c);
+    const pendiente = cobros.filter((c) => estado(c) === "pendiente").reduce((s, c) => s + Number(c.monto), 0);
+    const aprobado = cobros.filter((c) => estado(c) === "aprobado").reduce((s, c) => s + Number(c.monto), 0);
+    const vencido = cobros.filter((c) => estado(c) === "vencido").reduce((s, c) => s + Number(c.monto), 0);
     return { pendiente, aprobado, vencido };
   }, [cobros]);
 
@@ -171,32 +172,37 @@ export function Cobros() {
             },
             { key: "metodo", header: "Método", render: (c: Cobro) => c.metodo },
             { key: "recibo", header: "Recibo", render: (c: Cobro) => c.nro_recibo || "—" },
-            { key: "estado", header: "Estado", render: (c: Cobro) => <EstatusCobroBadge estado={c.estado} /> },
+            { key: "estado", header: "Estado", render: (c: Cobro) => <EstatusCobroBadge estado={estadoCobroEfectivo(c)} /> },
             {
               key: "acciones",
               header: "",
               className: "text-right",
-              render: (c: Cobro) => (
-                <div className="flex justify-end gap-1">
-                  <WhatsAppButton
-                    telefono="5491100000000"
-                    mensaje={RecordatorioMsg({
-                      cliente: "el cliente",
-                      monto: formatAR$(Number(c.monto)),
-                      pauta: (c as CobroConPauta).pautas?.nombre ?? "tu pauta",
-                    })}
-                    label="Recordar"
-                  />
-                  {c.estado !== "aprobado" ? (
-                    <Button variant="ghost" size="sm" onClick={() => cambiarEstado(c, "aprobado")}>
-                      Marcar aprobado
+              render: (c: Cobro) => {
+                const pauta = (c as CobroConPauta).pautas;
+                const cliente = pauta?.clientes;
+                const estado = estadoCobroEfectivo(c);
+                return (
+                  <div className="flex justify-end gap-1">
+                    <WhatsAppButton
+                      telefono={cliente?.telefono ?? ""}
+                      mensaje={RecordatorioMsg({
+                        cliente: cliente?.nombre ?? "el cliente",
+                        monto: formatAR$(Number(c.monto)),
+                        pauta: pauta?.nombre ?? "tu pauta",
+                      })}
+                      label="Recordar"
+                    />
+                    {estado !== "aprobado" ? (
+                      <Button variant="ghost" size="sm" onClick={() => cambiarEstado(c, "aprobado")}>
+                        Marcar aprobado
+                      </Button>
+                    ) : null}
+                    <Button variant="ghost" size="sm" className="text-danger-600" onClick={() => borrar(c)}>
+                      Borrar
                     </Button>
-                  ) : null}
-                  <Button variant="ghost" size="sm" className="text-danger-600" onClick={() => borrar(c)}>
-                    Borrar
-                  </Button>
-                </div>
-              ),
+                  </div>
+                );
+              },
             },
           ]}
         />
