@@ -102,6 +102,8 @@ Seed opcional protegido.
 - `npm run dev` — servidor local (puerto 5173)
 - `npm run build` — typecheck (`tsc -b`) + build (`vite build`)
 - `npm run lint` — eslint
+- `npm run test` — corre la suite de tests (vitest)
+- `npm run test:watch` — vitest en modo watch
 - `npm run preview` — previsualizar build
 
 ## 8. Progreso (log)
@@ -122,6 +124,17 @@ Seed opcional protegido.
 - [x] WhatsApp 1-Clic
 - [x] Lint + typecheck + build  ✅
 
+**FASE 1.5 — Auditoría + tests (completada)**
+- [x] Instalar stack de tests (Vitest 4 + Testing Library + jsdom)
+- [x] Configurar vitest.config + setup
+- [x] Tests unitarios `lib/utils.ts` (28)
+- [x] Tests `lib/api.ts` — cálculo de `monto_total` (4)
+- [x] Tests componentes UI — Button, Input, Badge, Modal, WhatsApp (28)
+- [x] Smoke Auth con Supabase mockeado (5)
+- [x] Bug fix: `normalizarTelefono` (10 dígitos mal formado)
+- [x] Bug fix: `AuthContext.signIn/signUp` throw de Error
+- [x] `npm test` 67/67 ✓ · `npm run lint` 0 errores · `npm run build` ✓
+
 **Checklist de verificación:** `npm run build` OK · `npm run lint` 0 errores (1 warning
 de fast-refresh). Build a `dist/` correcto (98 módulos).
 
@@ -137,6 +150,43 @@ de fast-refresh). Build a `dist/` correcto (98 módulos).
   `@vitejs/plugin-react@5` (requerido por vite 8).
 - Verificación: `npm install` → `found 0 vulnerabilities` · `npm run build` OK (87 módulos, Vite 8) ·
   `npm run lint` 0 errores (1 warning fast-refresh) · dev server HTTP 200.
+
+### Auditoría + tests (FASE 1.5) — 2026-08-26
+- **Hallazgos / bugs corregidos durante la auditoría:**
+  - `src/lib/utils.ts` `normalizarTelefono`: quitaba el `9` de un local de 10 dígitos,
+    dejando un número mal formado de 9 dígitos. Cambiado el chequeo a `length === 11`
+    (input móvil con prefijo `9`), que es el caso correcto.
+  - `src/context/AuthContext.tsx` `signIn`/`signUp`: hacían `throw error` (objeto
+    crudo de Supabase, que **no** es instancia de `Error`). Esto rompía el catch en
+    `Auth.tsx` que muestra el mensaje en español para "Invalid login credentials".
+    Se reemplazó por `throw new Error(error.message)`.
+
+- **Stack de tests agregado:**
+  - `vitest@4` + `jsdom` + `@testing-library/react` + `@testing-library/jest-dom` +
+    `@testing-library/user-event`.
+  - `vitest.config.ts` (mismo alias `@` que `vite.config.ts`, `environment: jsdom`,
+    `setupFiles: src/test/setup.ts`).
+  - `src/test/setup.ts` (cleanup automático + `matchMedia` mock).
+
+- **Suite (67 tests en 8 archivos, todos pasan):**
+  - `src/lib/utils.test.ts` — 28 tests (moneda, parseo, fechas, tel, wa.me, initiales, vencido).
+  - `src/lib/api.test.ts` — 4 tests (cálculo `monto_total = pases * tarifa` en `crearPauta`,
+    updates y deletes).
+  - `src/components/ui/Button.test.tsx` — 5 tests.
+  - `src/components/ui/Input.test.tsx` — 6 tests (Input + Select controlado).
+  - `src/components/ui/Badge.test.tsx` — 8 tests (Badge + EstatusCobroBadge + EstatusPautaBadge).
+  - `src/components/ui/Modal.test.tsx` — 6 tests (open/close, ESC, backdrop, scroll-lock).
+  - `src/components/ui/WhatsApp.test.tsx` — 3 tests (link wa.me + mensaje recordatorio).
+  - `src/pages/Auth.test.tsx` — 5 tests (login, registro, error es-AR, flujo mockeando Supabase).
+
+- **Verificación:** `npm run test` → 67/67 ✓ · `npm run lint` → 0 errores (1 warning
+  fast-refresh conocido) · `npm run build` → 87 módulos, sin errores.
+
+- **Pendientes / próximos pasos sugeridos:**
+  - Tests E2E con Playwright (flujos completos: alta cliente → pauta → cobro → WhatsApp).
+  - Tests de los componentes/páginas: `Clientes`, `Pautas`, `Cobros`, `Dashboard` con
+    MSW + `@testing-library/user-event`.
+  - Tests de `generarDatosDemo` (integración contra un Supabase local o MSW).
 
 ### Lo que falta / próximos pasos
 - [ ] Que el usuario cree el proyecto en Supabase, corra `supabase/schema.sql` y pegue `.env`.

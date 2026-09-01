@@ -56,7 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    if (error) throw new Error(error.message);
   };
 
   const signUp = async (email: string, password: string, nombre: string) => {
@@ -65,7 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password,
       options: { data: { nombre } },
     });
-    if (error) throw error;
+    if (error) throw new Error(error.message);
     if (!data.session) {
       return "Revisá tu correo para confirmar la cuenta antes de iniciar sesión.";
     }

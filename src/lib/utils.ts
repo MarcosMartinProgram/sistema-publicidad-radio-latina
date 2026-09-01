@@ -50,7 +50,7 @@ export function normalizarTelefono(telefono: string): string {
   const limpio = telefono.replace(/\D/g, "");
   let local = limpio;
   if (local.startsWith("0")) local = local.slice(1);
-  if (local.length === 10 && local.startsWith("9")) local = local.slice(1);
+  if (local.length === 11 && local.startsWith("9")) local = local.slice(1);
   if (!local.startsWith("54")) local = `54${local}`;
   return local;
 }
