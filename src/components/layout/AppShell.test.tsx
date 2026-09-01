@@ -39,13 +39,14 @@ describe("AppShell sidebar", () => {
     );
     const img = screen.getByAltText("MPM Labs");
     expect(img).toHaveAttribute("src", "/LogoMPMLabs%20(2).png");
-    expect(
-      screen.getByText((content, node) => {
-        const hasText = (el: Element) =>
-          el.textContent === "© 2026 MPM Labs · Todos los derechos reservados";
-        return node?.textContent === "© 2026 MPM Labs · Todos los derechos reservados" && Array.from(node!.children).every((child) => !hasText(child));
-      })
-    ).toBeInTheDocument();
+    const txt = "© 2026 MPM Labs · Todos los derechos reservados";
+expect(
+  screen.getByText((_c, node) => {
+    if (!node) return false;
+    const hasText = (el: Element) => el.textContent === txt && el !== node;
+    return node.textContent === txt && !Array.from(node.children).some(hasText);
+  })
+).toBeInTheDocument();
     expect(screen.getByText("102.3 FM · Argentina")).toBeInTheDocument();
   });
 });
