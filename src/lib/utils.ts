@@ -151,3 +151,36 @@ export function estadoCobroEfectivo(
   if (cobro.fecha_vencimiento && cobro.fecha_vencimiento < hoyISO()) return "vencido";
   return "pendiente";
 }
+
+/** Meses sin cobro aprobado de una pauta, desde su inicio hasta hoy. */
+export function mesesImpagos(pauta: Pauta, cobros: Cobro[]): string[] {
+  const hoy = hoyISO();
+  const mesActual = hoy.slice(0, 7);
+  const pagados = new Set(
+    cobros
+      .filter((c) => c.estado === "aprobado" && c.fecha_pago)
+      .map((c) => mesDe(c.fecha_pago)),
+  );
+  const mesInicio = mesDe(pauta.fecha_inicio);
+  return mesesEntre(mesInicio > mesActual ? mesActual : mesInicio, mesActual).filter(
+    (m) => !pagados.has(m),
+  );
+}
+
+/** Monto adeudado acumulado de una pauta: mensual × meses sin cobro aprobado. */
+export function montoAdeudado(pauta: Pauta, cobros: Cobro[]): number {
+  return mesesImpagos(pauta, cobros).length * Number(pauta.monto_total);
+}
+
+/** Días de atraso de una pauta: hoy menos el vencimiento (día 10) del primer
+ *  mes impago más reciente. Si está al día o el mes todavía no venció → 0. */
+export function diasDeAtraso(pauta: Pauta, cobros: Cobro[]): number {
+  const impagos = mesesImpagos(pauta, cobros);
+  if (impagos.length === 0) return 0;
+
+  const masReciente = impagos[impagos.length - 1];
+  const vencIMes = new Date(`${masReciente}-10T00:00:00`);
+  const hoy = new Date(`${hoyISO()}T00:00:00`);
+  const diff = Math.floor((hoy.getTime() - vencIMes.getTime()) / 86_400_000);
+  return diff > 0 ? diff : 0;
+}

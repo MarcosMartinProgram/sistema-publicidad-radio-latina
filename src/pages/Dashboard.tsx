@@ -2,13 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Card } from "@/components/ui/Card";
 import { Table } from "@/components/ui/Table";
-import { EstatusCobroBadge, EstatusPautaMensualBadge } from "@/components/ui/Badge";
+import { EstatusPautaMensualBadge } from "@/components/ui/Badge";
 import { StatCard } from "@/components/ui/StatCard";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Feedback";
-import { WhatsAppButton, RecordatorioMsg } from "@/components/ui/WhatsApp";
+import { WhatsAppButton, MensajePautaMensual } from "@/components/ui/WhatsApp";
 import { listarClientes, listarCobrosConPauta, listarPautasConCliente, generarDatosDemo } from "@/lib/api";
-import { formatAR$, formatFecha, estadoPautaMensual, estadoCobroEfectivo } from "@/lib/utils";
+import { formatAR$, estadoPautaMensual, estadoCobroEfectivo, diasDeAtraso, montoAdeudado } from "@/lib/utils";
+import type { EstadoMensual } from "@/lib/utils";
 import type { Cliente, Cobro, CobroConPauta, Pauta } from "@/lib/types";
 
 export function Dashboard() {
@@ -65,7 +66,10 @@ export function Dashboard() {
     const pautasVencidas = pautas.filter(
       (p) => estadoPautaMensual(p, cobros.filter((c) => c.pauta_id === p.id)) === "vencida",
     );
-    const totalVencidoPautas = pautasVencidas.reduce((s, c) => s + Number(c.monto_total), 0);
+    const totalVencidoPautas = pautasVencidas.reduce(
+      (s, p) => s + montoAdeudado(p, cobros.filter((c) => c.pauta_id === p.id)),
+      0,
+    );
     return { pendiente, totalAprobado, porCobrar, totalVencidoPautas, pautasVencidas };
   }, [cobros, pautas]);
 
@@ -117,7 +121,7 @@ export function Dashboard() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <PautasRecientes pautas={pautas} clientes={clientes} cobros={cobros} />
-        <CobrosPendientes cobros={cobros} className="lg:col-span-2" />
+        <SemaforoCobros pautas={pautas} clientes={clientes} cobros={cobros} className="lg:col-span-2" />
       </div>
     </div>
   );
@@ -149,46 +153,74 @@ function PautasRecientes({ pautas, clientes, cobros }: { pautas: Pauta[]; client
   );
 }
 
-function CobrosPendientes({ cobros, className }: { cobros: CobroConPauta[]; className?: string }) {
-  const pendientes = cobros
-    .map((c) => ({ ...c, estado: estadoCobroEfectivo(c) }))
-    .filter((c) => c.estado !== "aprobado")
-    .slice(0, 6);
+function SemaforoCobros({
+  pautas,
+  clientes,
+  cobros,
+  className,
+}: {
+  pautas: Pauta[];
+  clientes: Cliente[];
+  cobros: Cobro[];
+  className?: string;
+}) {
+  const filas = useMemo(() => {
+    return pautas
+      .map((p) => {
+        const deuda = cobros.filter((c) => c.pauta_id === p.id);
+        const estado = estadoPautaMensual(p, deuda);
+        const cliente = clientes.find((c) => c.id === p.cliente_id);
+        return {
+          pauta: p,
+          cliente: cliente?.nombre ?? "—",
+          telefono: cliente?.telefono ?? "",
+          estado,
+          atraso: diasDeAtraso(p, deuda),
+          adeudado: montoAdeudado(p, deuda),
+        };
+      })
+      .filter((r) => r.estado !== "al_dia")
+      .sort((a, b) => estadoOrden(b.estado) - estadoOrden(a.estado))
+      .slice(0, 8);
+  }, [pautas, clientes, cobros]);
+
   return (
     <Card title="Semáforo de cobros" className={className}>
       <Table
-        rows={pendientes}
-        empty="No hay cobros pendientes. ¡Todo al día!"
+        rows={filas}
+        empty="No hay pautas pendientes ni vencidas. ¡Todo al día!"
         columns={[
-          { key: "monto", header: "Monto", render: (c: Cobro) => <b>{formatAR$(Number(c.monto))}</b> },
+          { key: "pauta", header: "Pauta", render: (r) => r.pauta.nombre },
+          { key: "cliente", header: "Cliente", render: (r) => r.cliente },
           {
-            key: "pauta",
-            header: "Concepto",
-            render: (c: CobroConPauta) => c.pautas?.nombre ?? "—",
-          },
-          {
-            key: "vto",
-            header: "Vence",
-            render: (c: Cobro) => formatFecha(c.fecha_vencimiento || c.created_at),
+            key: "monto",
+            header: "Monto total",
+            render: (r) => <b>{formatAR$(r.adeudado > 0 ? r.adeudado : Number(r.pauta.monto_total))}</b>,
           },
           {
             key: "estado",
             header: "Estado",
-            render: (c: Cobro) => <EstatusCobroBadge estado={c.estado} />,
+            render: (r) => <EstatusPautaMensualBadge estado={r.estado} />,
+          },
+          {
+            key: "atraso",
+            header: "Atraso",
+            render: (r) => (r.atraso > 0 ? `${r.atraso} día${r.atraso === 1 ? "" : "s"}` : "—"),
           },
           {
             key: "accion",
             header: "",
             className: "text-right",
-            render: (c: CobroConPauta) => (
+            render: (r) => (
               <WhatsAppButton
-                telefono={c.pautas?.clientes?.telefono ?? ""}
-                mensaje={RecordatorioMsg({
-                  cliente: c.pautas?.clientes?.nombre ?? "el cliente",
-                  monto: formatAR$(Number(c.monto)),
-                  pauta: c.pautas?.nombre ?? "tu pauta",
+                telefono={r.telefono}
+                mensaje={MensajePautaMensual({
+                  cliente: r.cliente,
+                  monto: formatAR$(r.adeudado > 0 ? r.adeudado : Number(r.pauta.monto_total)),
+                  pauta: r.pauta.nombre,
+                  atrasoDias: r.atraso,
                 })}
-                label="Recordatorio"
+                label={r.atraso > 0 ? "Cobrar" : "Recordar"}
               />
             ),
           },
@@ -196,4 +228,10 @@ function CobrosPendientes({ cobros, className }: { cobros: CobroConPauta[]; clas
       />
     </Card>
   );
+}
+
+function estadoOrden(e: EstadoMensual): number {
+  if (e === "vencida") return 0;
+  if (e === "pendiente") return 1;
+  return 2;
 }

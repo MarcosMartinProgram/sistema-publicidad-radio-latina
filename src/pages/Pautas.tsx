@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Input, Select } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Feedback";
-import { WhatsAppButton } from "@/components/ui/WhatsApp";
+import { WhatsAppButton, MensajePautaMensual } from "@/components/ui/WhatsApp";
 import {
   listarClientes,
   listarPautasConCliente,
@@ -15,7 +15,17 @@ import {
   crearPauta,
   eliminarPauta,
 } from "@/lib/api";
-import { formatAR$, formatFecha, hoyISO, parseMonto, sumarDias, estadoPautaMensual } from "@/lib/utils";
+import {
+  formatAR$,
+  formatFecha,
+  hoyISO,
+  parseMonto,
+  sumarDias,
+  estadoPautaMensual,
+  montoAdeudado,
+  diasDeAtraso,
+  mesesImpagos,
+} from "@/lib/utils";
 import type { Cliente, Cobro, Pauta } from "@/lib/types";
 
 interface FormState {
@@ -64,7 +74,11 @@ export function Pautas() {
 
   const nombreCliente = (id: string) => clientes.find((c) => c.id === id)?.nombre ?? "—";
   const telefonoCliente = (id: string) => clientes.find((c) => c.id === id)?.telefono ?? "";
-  const estadoMensual = (p: Pauta) => estadoPautaMensual(p, cobros.filter((c) => c.pauta_id === p.id));
+  const cobrosDe = (p: Pauta) => cobros.filter((c) => c.pauta_id === p.id);
+  const estadoMensual = (p: Pauta) => estadoPautaMensual(p, cobrosDe(p));
+  const deuda = (p: Pauta) => montoAdeudado(p, cobrosDe(p));
+  const mesesPg = (p: Pauta) => mesesImpagos(p, cobrosDe(p)).length;
+  const atraso = (p: Pauta) => diasDeAtraso(p, cobrosDe(p));
 
   const monto = form.pases * form.tarifa || 0;
 
@@ -150,7 +164,22 @@ export function Pautas() {
             { key: "cliente", header: "Cliente", render: (p: Pauta) => nombreCliente(p.cliente_id) },
             { key: "pases", header: "Pases", render: (p: Pauta) => p.pases },
             { key: "tarifa", header: "Tarifa", render: (p: Pauta) => formatAR$(Number(p.tarifa)) },
-            { key: "total", header: "Total", render: (p: Pauta) => <b>{formatAR$(Number(p.monto_total))}</b> },
+            {
+              key: "total",
+              header: "Total",
+              render: (p: Pauta) => {
+                const adeudado = deuda(p);
+                if (adeudado <= 0) return <b>{formatAR$(Number(p.monto_total))}</b>;
+                return (
+                  <div>
+                    <b className="text-danger-600">{formatAR$(adeudado)}</b>
+                    <p className="text-body-sm text-on-surface-variant">
+                      {formatAR$(Number(p.monto_total))} × {mesesPg(p)} mes{mesesPg(p) === 1 ? "" : "es"}
+                    </p>
+                  </div>
+                );
+              },
+            },
             {
               key: "periodo",
               header: "Periodo",
@@ -165,8 +194,13 @@ export function Pautas() {
                 <div className="flex justify-end gap-1">
                   <WhatsAppButton
                     telefono={telefonoCliente(p.cliente_id)}
-                    mensaje={`Hola ${nombreCliente(p.cliente_id).split(" ")[0] || "cliente"}! 👋 Radio Latina Du Graty 102.3 Mhz: tu pauta "${p.nombre}" está ${estadoMensual(p) === "al_dia" ? "al día" : estadoMensual(p)}.`}
-                    label="WhatsApp"
+                    mensaje={MensajePautaMensual({
+                      cliente: nombreCliente(p.cliente_id).split(" ")[0] || "cliente",
+                      monto: formatAR$(deuda(p) > 0 ? deuda(p) : Number(p.monto_total)),
+                      pauta: p.nombre,
+                      atrasoDias: atraso(p),
+                    })}
+                    label={deuda(p) > 0 ? "Cobrar" : "WhatsApp"}
                   />
                   <Button variant="ghost" size="sm" className="text-danger-600" onClick={() => borrar(p)}>
                     Borrar

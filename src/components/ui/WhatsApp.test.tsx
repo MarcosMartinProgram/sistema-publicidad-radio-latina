@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { WhatsAppButton, RecordatorioMsg } from "@/components/ui/WhatsApp";
+import { WhatsAppButton, RecordatorioMsg, MensajePautaMensual } from "@/components/ui/WhatsApp";
 
 describe("WhatsAppButton", () => {
   it("es un link directo a wa.me con el teléfono normalizado y el mensaje", () => {
@@ -26,5 +26,26 @@ describe("RecordatorioMsg", () => {
     expect(msg).toMatch(/\$5\.000/);
     expect(msg).toMatch(/Verano/);
     expect(msg).toMatch(/Radio Latina Du Graty 102\.3 Mhz/);
+  });
+});
+
+describe("MensajePautaMensual", () => {
+  it("incluye días de atraso y monto total cuando la pauta está vencida", () => {
+    const msg = MensajePautaMensual({ cliente: "Ana", monto: "$150.000", pauta: "Campaña", atrasoDias: 5 });
+    expect(msg).toMatch(/Hola Ana/);
+    expect(msg).toMatch(/atraso de 5 días/);
+    expect(msg).toMatch(/\$150\.000/);
+    expect(msg).toMatch(/Campaña/);
+  });
+
+  it("usa singular 'día' cuando el atraso es de 1 día", () => {
+    const msg = MensajePautaMensual({ cliente: "Ana", monto: "$150.000", pauta: "Campaña", atrasoDias: 1 });
+    expect(msg).toMatch(/atraso de 1 día/);
+  });
+
+  it("avisa del vencimiento del día 10 cuando no hay atraso", () => {
+    const msg = MensajePautaMensual({ cliente: "Ana", monto: "$150.000", pauta: "Campaña", atrasoDias: 0 });
+    expect(msg).toMatch(/vence el día 10/);
+    expect(msg).toMatch(/\$150\.000/);
   });
 });

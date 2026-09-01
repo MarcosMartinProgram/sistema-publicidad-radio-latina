@@ -7,6 +7,7 @@ import { Dashboard } from "@/pages/Dashboard";
 import { Clientes } from "@/pages/Clientes";
 import { Pautas } from "@/pages/Pautas";
 import { Cobros } from "@/pages/Cobros";
+import { Informes } from "@/pages/Informes";
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
   const { session, loading } = useAuth();
@@ -52,6 +53,7 @@ export function App() {
         <Route path="/clientes" element={<Clientes />} />
         <Route path="/pautas" element={<Pautas />} />
         <Route path="/cobros" element={<Cobros />} />
+        <Route path="/informes" element={<Informes />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

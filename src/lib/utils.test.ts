@@ -12,6 +12,8 @@ import {
   esVencido,
   estadoPautaMensual,
   estadoCobroEfectivo,
+  diasDeAtraso,
+  montoAdeudado,
 } from "@/lib/utils";
 
 describe("formatAR$", () => {
@@ -257,5 +259,104 @@ describe("estadoCobroEfectivo", () => {
   it("pendiente con vencimiento futuro o nulo → pendiente", () => {
     expect(estadoCobroEfectivo({ estado: "pendiente", fecha_vencimiento: "2999-12-31" })).toBe("pendiente");
     expect(estadoCobroEfectivo({ estado: "pendiente", fecha_vencimiento: null })).toBe("pendiente");
+  });
+});
+
+describe("diasDeAtraso", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const cobro = (estado: "aprobado" | "pendiente" | "vencido", fechaPago: string) =>
+    ({ estado, fecha_pago: fechaPago }) as Parameters<typeof estadoPautaMensual>[1][number];
+
+  const pauta = (fechaInicio = "2026-06-01") =>
+    ({ fecha_inicio: fechaInicio, fecha_fin: "2026-12-31" }) as Parameters<typeof estadoPautaMensual>[0];
+
+  it("da 0 si está al día", () => {
+    vi.setSystemTime(new Date("2026-09-15T12:00:00"));
+    const cobros = [
+      cobro("aprobado", "2026-06-05"),
+      cobro("aprobado", "2026-07-05"),
+      cobro("aprobado", "2026-08-05"),
+      cobro("aprobado", "2026-09-03"),
+    ];
+    expect(diasDeAtraso(pauta("2026-06-01"), cobros)).toBe(0);
+  });
+
+  it("da 0 si el mes actual aún no venció (día 1-10)", () => {
+    vi.setSystemTime(new Date("2026-09-05T12:00:00"));
+    const cobros = [
+      cobro("aprobado", "2026-06-05"),
+      cobro("aprobado", "2026-07-05"),
+      cobro("aprobado", "2026-08-05"),
+    ];
+    expect(diasDeAtraso(pauta("2026-06-01"), cobros)).toBe(0);
+  });
+
+  it("calcula el atraso desde el vencimiento (día 10) del primer mes sin pagar", () => {
+    vi.setSystemTime(new Date("2026-09-15T12:00:00"));
+    const cobros = [
+      cobro("aprobado", "2026-06-05"),
+      cobro("aprobado", "2026-07-05"),
+      cobro("aprobado", "2026-08-05"),
+    ];
+    expect(diasDeAtraso(pauta("2026-06-01"), cobros)).toBe(5);
+  });
+
+  it("cuenta atraso sobre el mes impago más reciente aunque esté pagado el actual", () => {
+    vi.setSystemTime(new Date("2026-09-20T12:00:00"));
+    const cobros = [
+      cobro("aprobado", "2026-06-05"),
+      cobro("aprobado", "2026-08-05"),
+      cobro("aprobado", "2026-09-03"),
+    ];
+    expect(diasDeAtraso(pauta("2026-06-01"), cobros)).toBe(72);
+  });
+});
+
+describe("montoAdeudado", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const cobro = (estado: "aprobado" | "pendiente" | "vencido", fechaPago: string) =>
+    ({ estado, fecha_pago: fechaPago }) as Parameters<typeof estadoPautaMensual>[1][number];
+
+  const pauta = (fechaInicio = "2026-06-01", montoTotal = 50000) =>
+    ({ fecha_inicio: fechaInicio, fecha_fin: "2026-12-31", monto_total: montoTotal }) as unknown as Parameters<
+      typeof estadoPautaMensual
+    >[0];
+
+  it("es 0 si todos los meses están pagos", () => {
+    vi.setSystemTime(new Date("2026-09-15T12:00:00"));
+    const cobros = [
+      cobro("aprobado", "2026-06-05"),
+      cobro("aprobado", "2026-07-05"),
+      cobro("aprobado", "2026-08-05"),
+      cobro("aprobado", "2026-09-03"),
+    ];
+    expect(montoAdeudado(pauta("2026-06-01", 50000), cobros)).toBe(0);
+  });
+
+  it("acumula 1 mes cuando solo falta pagar el actual", () => {
+    vi.setSystemTime(new Date("2026-09-15T12:00:00"));
+    const cobros = [
+      cobro("aprobado", "2026-06-05"),
+      cobro("aprobado", "2026-07-05"),
+      cobro("aprobado", "2026-08-05"),
+    ];
+    expect(montoAdeudado(pauta("2026-06-01", 50000), cobros)).toBe(50000);
+  });
+
+  it("acumula varios meses sin pagar (junio, julio y agosto sin cobrar)", () => {
+    vi.setSystemTime(new Date("2026-09-15T12:00:00"));
+    const cobros = [cobro("aprobado", "2026-09-03")];
+    expect(montoAdeudado(pauta("2026-06-01", 50000), cobros)).toBe(150000);
+  });
+
+  it("multiplica el mensual por la cantidad de meses impagos", () => {
+    vi.setSystemTime(new Date("2026-11-20T12:00:00"));
+    expect(montoAdeudado(pauta("2026-06-01", 48000), [])).toBe(288000);
   });
 });

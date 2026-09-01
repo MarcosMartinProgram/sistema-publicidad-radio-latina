@@ -39,3 +39,20 @@ export function WhatsAppButton({
 export function RecordatorioMsg({ cliente, monto, pauta }: { cliente: string; monto: string; pauta: string }) {
   return `Hola ${cliente}! 👋 Te saludamos de Radio Latina Du Graty 102.3 Mhz. Te recordamos el pago pendiente de ${monto} por la pauta "${pauta}". Si ya lo abonaste, ignorá este mensaje. ¡Gracias!`;
 }
+
+export function MensajePautaMensual({
+  cliente,
+  monto,
+  pauta,
+  atrasoDias,
+}: {
+  cliente: string;
+  monto: string;
+  pauta: string;
+  atrasoDias: number;
+}) {
+  if (atrasoDias > 0) {
+    return `Hola ${cliente}! 👋 Te saludamos de Radio Latina Du Graty 102.3 Mhz. Te recordamos que tenés un atraso de ${atrasoDias} día${atrasoDias === 1 ? "" : "s"} en el pago de la pauta "${pauta}". El total adeudado es de ${monto}. Te pedimos regularizar lo antes posible para mantener la pauta al aire. ¡Gracias!`;
+  }
+  return `Hola ${cliente}! 👋 Te saludamos de Radio Latina Du Graty 102.3 Mhz. La pauta "${pauta}" vence el día 10 de este mes. El monto a abonar es de ${monto}. Si ya lo abonaste, ignorá este mensaje. ¡Gracias!`;
+}
