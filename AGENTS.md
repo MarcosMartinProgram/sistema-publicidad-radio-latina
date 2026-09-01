@@ -195,6 +195,18 @@ de fast-refresh). Build a `dist/` correcto (98 módulos).
       y número de emisor/configurable.
 - [ ] (Opcional) Edición completa de pautas/cobros (hoy alta + cambio de estado + borrado).
 
+### Configuración de producción (Supabase + Vercel) — 2026-09-01
+- Nombre de radio actualizado a **"Radio Latina Du Graty 102.3 Mhz"** en toda la UI y archivos.
+- **Signup con confirmación de email ON** (flujo deseado). El link de confirmación debe apuntar a
+  la URL desplegada, no a localhost. Se agregó `emailRedirectTo: window.location.origin` en
+  `signUp` de `AuthContext` y manejo del error "email rate limit exceeded" en español.
+- **Configuración requerida en Supabase Dashboard → Authentication → URL Configuration:**
+  - `Site URL` = URL de Vercel (ej. `https://tu-app.vercel.app`).
+  - Agregar la URL de Vercel en **Redirect URLs** (y opcionalmente `http://localhost:5173`).
+  - Si el email redirige a localhost, el signup falla y acumula rate limit.
+- **Configuración requerida en Vercel:** variables `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`
+  (sin `VITE_SEED_ENABLED` en producción).
+
 ### Notas de implementación
 - El seed de datos de ejemplo se hace **desde el cliente** (inserts con RLS) en
   `src/lib/api.ts → generarDatosDemo(userId)`, porque la función RPC `security definer`

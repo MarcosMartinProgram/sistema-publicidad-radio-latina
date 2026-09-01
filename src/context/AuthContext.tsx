@@ -60,12 +60,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, nombre: string) => {
+    const redirectTo = typeof window !== "undefined" ? window.location.origin : undefined;
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { nombre } },
+      options: {
+        data: { nombre },
+        emailRedirectTo: redirectTo,
+      },
     });
-    if (error) throw new Error(error.message);
+    if (error) {
+      if (/rate limit/i.test(error.message)) {
+        throw new Error(
+          "Demasiados intentos de registro. Esperá unos minutos y volvé a intentar."
+        );
+      }
+      throw new Error(error.message);
+    }
     if (!data.session) {
       return "Revisá tu correo para confirmar la cuenta antes de iniciar sesión.";
     }
