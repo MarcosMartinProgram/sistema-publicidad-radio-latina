@@ -43,3 +43,29 @@ body {
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
+/* Impresión / PDF: solo se imprime el contenido principal */
+@media print {
+  header,
+  aside,
+  nav {
+    display: none !important;
+  }
+  .lg\:pl-64 {
+    padding-left: 0 !important;
+  }
+  main {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .card {
+    break-inside: avoid;
+  }
+  thead {
+    display: table-header-group;
+  }
+  tr {
+    break-inside: avoid;
+  }
+}

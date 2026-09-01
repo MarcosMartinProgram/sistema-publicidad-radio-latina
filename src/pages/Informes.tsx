@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Feedback";
 import { StatCard } from "@/components/ui/StatCard";
 import { listarCobrosConPauta } from "@/lib/api";
-import { formatAR$, formatFecha } from "@/lib/utils";
+import { formatAR$, formatFecha, hoyISO } from "@/lib/utils";
 import {
   ingresosPorPeriodo,
   pagosPorCliente,
@@ -25,6 +25,10 @@ const TIPOS: { value: TipoInforme; label: string }[] = [
   { value: "clientes", label: "Pagos por cliente" },
   { value: "campanas", label: "Por campaña" },
 ];
+
+function etiquetaTipo(t: TipoInforme): string {
+  return TIPOS.find((x) => x.value === t)?.label ?? t;
+}
 
 export function Informes() {
   const { user } = useAuth();
@@ -58,18 +62,40 @@ export function Informes() {
   const filasClientes = useMemo(() => pagosPorCliente(base), [base]);
   const filasCampanas = useMemo(() => pagosPorCampana(base), [base]);
 
+  const descripcionPeriodo = useMemo(() => {
+    if (periodo === "intervalo") {
+      if (!desde && !hasta) return "Todo el historial";
+      return `Del ${desde || "inicio de registros"} al ${hasta || "hoy"} inclusive`;
+    }
+    if (periodo === "anual") return "Agrupado por año";
+    return "Agrupado por mes";
+  }, [periodo, desde, hasta]);
+
   if (loading) return <Spinner label="Preparando informes..." />;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-headline-md font-semibold text-on-surface">Informes</h1>
-        <p className="text-body-md text-on-surface-variant">
-          Ingresos y pagos registrados (solo cobros aprobados).
+    <div className="space-y-6 print:space-y-4">
+      <div className="print:block hidden">
+        <p className="text-label-md uppercase text-on-surface-variant">
+          Radio Latina Du Graty 102.3 Mhz · Informe generado el {formatFecha(hoyISO())}
         </p>
+        <h1 className="text-headline-md font-semibold text-on-surface">{etiquetaTipo(tipo)}</h1>
+        <p className="text-body-md text-on-surface-variant">{descripcionPeriodo}</p>
       </div>
 
-      <div className="flex flex-wrap items-end gap-4 rounded-md border border-border bg-surface p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
+        <div>
+          <h1 className="text-headline-md font-semibold text-on-surface">Informes</h1>
+          <p className="text-body-md text-on-surface-variant">
+            Ingresos y pagos registrados (solo cobros aprobados).
+          </p>
+        </div>
+        <Button onClick={() => window.print()} variant="primary">
+          Imprimir / PDF
+        </Button>
+      </div>
+
+      <div className="flex flex-wrap items-end gap-4 rounded-md border border-border bg-surface p-4 print:hidden">
         <Select label="Informe" id="tipo" value={tipo} onChange={(e) => setTipo(e.target.value as TipoInforme)}>
           {TIPOS.map((t) => (
             <option key={t.value} value={t.value}>
