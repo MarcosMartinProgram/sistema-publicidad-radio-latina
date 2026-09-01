@@ -118,8 +118,23 @@ function SidebarInner() {
         ))}
       </nav>
 
-      <div className="px-6 py-5">
-        <p className="text-label-md text-inverse-on-surface/40">102.3 FM · Argentina</p>
+      <div className="mt-auto px-6 pb-5">
+        <p className="text-center text-label-md text-inverse-on-surface/40">102.3 FM · Argentina</p>
+        <div className="mt-3 flex flex-col items-center border-t border-white/10 pt-3">
+          <img src="/LogoMPMLabs%20(2).png" alt="MPM Labs" className="h-10 w-auto object-contain" />
+          <p className="mt-1.5 text-center text-label-md text-inverse-on-surface/40">
+            © {new Date().getFullYear()}{" "}
+            <a
+              href="https://www.mpmlabs.com.ar"
+              target="_blank"
+              rel="noreferrer"
+              className="text-inverse-on-surface/70 underline underline-offset-2 hover:text-surface"
+            >
+              MPM Labs
+            </a>{" "}
+            · Todos los derechos reservados
+          </p>
+        </div>
       </div>
     </>
   );
