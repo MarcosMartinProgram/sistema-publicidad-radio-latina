@@ -96,7 +96,7 @@ export async function generarDatosDemo(userId: string) {
 
   const pautasInsert = [
     { user_id: userId, cliente_id: c1.id, nombre: "Campaña Quincena Publicitaria", pases: 60, tarifa: 2500, monto_total: 150000, fecha_inicio: iso(-20), fecha_fin: iso(40), estado: "activa" },
-    { user_id: userId, cliente_id: c2.id, nombre: "Spot Mañanas 95.7", pases: 30, tarifa: 1200, monto_total: 36000, fecha_inicio: iso(-10), fecha_fin: iso(20), estado: "activa" },
+    { user_id: userId, cliente_id: c2.id, nombre: "Spot Mañanas", pases: 30, tarifa: 1200, monto_total: 36000, fecha_inicio: iso(-10), fecha_fin: iso(20), estado: "activa" },
     { user_id: userId, cliente_id: c3.id, nombre: "Verano - Happy Hour", pases: 20, tarifa: 900, monto_total: 18000, fecha_inicio: iso(-40), fecha_fin: iso(-5), estado: "finalizada" },
   ] satisfies Database["public"]["Tables"]["pautas"]["Insert"][];
 

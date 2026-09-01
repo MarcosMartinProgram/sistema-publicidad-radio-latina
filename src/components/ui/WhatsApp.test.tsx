@@ -28,6 +28,6 @@ describe("RecordatorioMsg", () => {
     expect(msg).toMatch(/Hola Ana/);
     expect(msg).toMatch(/\$5\.000/);
     expect(msg).toMatch(/Verano/);
-    expect(msg).toMatch(/Radio Latina 95\.7/);
+    expect(msg).toMatch(/Radio Latina Du Graty 102\.3 Mhz/);
   });
 });

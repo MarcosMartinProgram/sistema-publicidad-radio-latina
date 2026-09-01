@@ -1,4 +1,4 @@
-# Sistema Publicidad · Radio Latina 95.7
+# Sistema Publicidad · Radio Latina Du Graty 102.3 Mhz
 
 App web de gestión de publicidad (SaaS) construida con **React + Vite + Tailwind + Supabase**,
 siguiendo el design system **"Sincronía Latina"** de los diseños de Google Stitch.

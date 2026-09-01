@@ -41,7 +41,7 @@ export function Auth() {
           <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary-container text-headline-md font-bold text-on-primary">
             RL
           </span>
-          <h1 className="mt-4 text-headline-md font-semibold text-surface">Radio Latina 95.7</h1>
+          <h1 className="mt-4 text-headline-md font-semibold text-surface">Radio Latina Du Graty 102.3 Mhz</h1>
           <p className="text-body-md text-inverse-on-surface/60">Sistema de Gestión Publicitaria</p>
         </div>
 
@@ -110,7 +110,7 @@ export function Auth() {
         </div>
 
         <p className="mt-4 text-center text-body-sm text-inverse-on-surface/50">
-          95.7 FM · Gestión de Publicidad
+          102.3 FM · Gestión de Publicidad
         </p>
       </div>
     </div>

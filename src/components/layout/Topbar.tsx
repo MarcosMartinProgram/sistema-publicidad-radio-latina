@@ -13,7 +13,7 @@ const titulos: Record<string, string> = {
 export function Topbar() {
   const { pathname } = useLocation();
   const { user, profile, signOut } = useAuth();
-  const titulo = titulos[pathname] ?? "Radio Latina";
+  const titulo = titulos[pathname] ?? "Radio Latina Du Graty 102.3 Mhz";
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border bg-background px-4 sm:px-6 lg:px-8">

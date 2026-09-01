@@ -81,8 +81,8 @@ function SidebarInner() {
           RL
         </span>
         <div>
-          <p className="text-body-md font-semibold leading-tight text-surface">Radio Latina</p>
-          <p className="text-label-md text-inverse-on-surface/60">95.7 · Gestión</p>
+          <p className="text-body-md font-semibold leading-tight text-surface">Radio Latina Du Graty 102.3 Mhz</p>
+          <p className="text-label-md text-inverse-on-surface/60">102.3 Mhz · Gestión</p>
         </div>
       </div>
 
@@ -107,7 +107,7 @@ function SidebarInner() {
       </nav>
 
       <div className="px-6 py-5">
-        <p className="text-label-md text-inverse-on-surface/40">95.7 FM · Argentina</p>
+        <p className="text-label-md text-inverse-on-surface/40">102.3 FM · Argentina</p>
       </div>
     </>
   );

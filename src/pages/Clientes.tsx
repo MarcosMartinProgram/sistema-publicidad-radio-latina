@@ -154,7 +154,7 @@ export function Clientes() {
             { key: "tel", header: "Teléfono", render: (c: Cliente) => (
                 <WhatsAppButton
                   telefono={c.telefono}
-                  mensaje={`Hola ${c.nombre.split(" ")[0]}! 👋 Saludamos de Radio Latina 95.7.`}
+                  mensaje={`Hola ${c.nombre.split(" ")[0]}! 👋 Saludamos de Radio Latina Du Graty 102.3 Mhz.`}
                   label={c.telefono}
                 />
               ) },

@@ -166,7 +166,7 @@ export function Pautas() {
                 <div className="flex justify-end gap-1">
                   <WhatsAppButton
                     telefono={telefonoCliente(p.cliente_id)}
-                    mensaje={`Hola ${nombreCliente(p.cliente_id).split(" ")[0] || "cliente"}! 👋 Radio Latina 95.7: tu pauta "${p.nombre}" está ${p.estado}.`}
+                    mensaje={`Hola ${nombreCliente(p.cliente_id).split(" ")[0] || "cliente"}! 👋 Radio Latina Du Graty 102.3 Mhz: tu pauta "${p.nombre}" está ${p.estado}.`}
                     label="WhatsApp"
                   />
                   {p.estado !== "finalizada" ? (

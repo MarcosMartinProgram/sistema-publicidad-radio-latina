@@ -1,11 +1,11 @@
-# AGENTS.md — Sistema Publicidad Radio Latina 95.7
+# AGENTS.md — Sistema Publicidad Radio Latina Du Graty 102.3 Mhz
 
 > Documento vivo. Registra el plan, las decisiones y el progreso del proyecto.
 > Actualizar en cada cambio relevante.
 
 ## 1. Resumen
 
-Aplicación web de gestión de publicidad para **Radio Latina 95.7** (FM). Sistema tipo
+Aplicación web de gestión de publicidad para **Radio Latina Du Graty 102.3 Mhz** (FM). Sistema tipo
 SaaS con dashboard, clientes, pautas/contratos, cobros/recibos y disparo por WhatsApp.
 Construida a partir de los diseños de **Google Stitch** conectados vía MCP
 (proyecto `Radio Latina Management SaaS`), aplicando el design system "Sincronía Latina".
