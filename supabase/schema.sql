@@ -102,6 +102,41 @@ create index if not exists idx_cobros_user_id on public.cobros (user_id);
 create index if not exists idx_cobros_pauta_id on public.cobros (pauta_id);
 
 -- ============================================================
+-- RECIBOS: numeración automática tipo talonario
+-- Formato "006-0000100" → punto de venta 006 + correlativo de 7 dígitos.
+-- La secuencia arranca en 100 (primer recibo: 006-0000100).
+-- El trigger asigna el número SOLO al cobro que queda "aprobado"
+-- (no consume números por cobros pendientes que nunca se pagan).
+-- ============================================================
+create sequence if not exists public.recibo_nro_seq
+  start with 100
+  minvalue 1
+  no cycle;
+
+-- Un índice único (parcial) evita recibos duplicados.
+create unique index if not exists uq_cobros_nro_recibo
+  on public.cobros (nro_recibo)
+  where nro_recibo is not null;
+
+create or replace function public.cobros_asignar_nro_recibo()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if new.estado = 'aprobado' and new.nro_recibo is null then
+    new.nro_recibo := '006-' || lpad(nextval('public.recibo_nro_seq')::text, 7, '0');
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists cobros_asignar_nro_recibo on public.cobros;
+create trigger cobros_asignar_nro_recibo
+  before insert or update of estado on public.cobros
+  for each row execute function public.cobros_asignar_nro_recibo();
+
+-- ============================================================
 -- ROW LEVEL SECURITY (RLS)
 -- Cada usuario solo ve y edita SU PROPIA información.
 -- ============================================================

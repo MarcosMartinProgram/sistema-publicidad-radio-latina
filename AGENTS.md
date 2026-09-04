@@ -50,32 +50,37 @@ Copiado al `tailwind.config.js` y `src/index.css`.
 
 ```
 sistema-publicidad/
-├─ public/favicon.svg
+├─ public/
+│  ├─ favicon.svg
+│  └─ LogoMPMLabs%20(2).png # logo de la empresa en el sidebar (referido URL-encoded)
 ├─ src/
-│  ├─ index.css             # estilos base + tokens
+│  ├─ index.css             # estilos base + tokens + @media print
 │  ├─ main.tsx              # bootstrap react + router
 │  ├─ App.tsx               # rutas + guard de auth
 │  ├─ vite-env.d.ts
 │  ├─ lib/
 │  │  ├─ supabase.ts        # cliente Supabase
 │  │  ├─ types.ts           # tipos de dominio (Cliente, Pauta, Cobro)
-│  │  └─ utils.ts           # moneda ARS, fechas, telefono, construcción wa.me
+│  │  ├─ utils.ts           # moneda ARS, fechas, estados, WhatsApp
+│  │  └─ reportes.ts        # lógica pura de informes (ingresos, clientes, campañas)
 │  ├─ data/seed.ts          # datos de ejemplo (opcional)
 │  ├─ context/AuthContext.tsx
 │  ├─ components/
 │  │  ├─ ui/                # Button, Card, Badge, Input, Modal, Table...
-│  │  └─ layout/            # Sidebar, Topbar, AppShell
+│  │  └─ layout/            # Sidebar (incluye logo + copyright), Topbar, AppShell
 │  └─ pages/
 │     ├─ Auth.tsx           # login / registro
 │     ├─ Dashboard.tsx
 │     ├─ Clientes.tsx
 │     ├─ Pautas.tsx
-│     └─ Cobros.tsx
+│     ├─ Cobros.tsx
+│     └─ Informes.tsx       # /informes: ingresos, pagos por cliente/campaña + imprimir
 ├─ supabase/
 │  └─ schema.sql            # tablas + RLS + seed (para pegar en SQL Editor)
 ├─ .env.example
 ├─ tailwind.config.js
 ├─ vite.config.ts
+├─ vitest.config.ts
 ├─ tsconfig*.json
 └─ AGENTS.md
 ```
@@ -189,10 +194,14 @@ de fast-refresh). Build a `dist/` correcto (98 módulos).
   - Tests de `generarDatosDemo` (integración contra un Supabase local o MSW).
 
 ### Lo que falta / próximos pasos
-- [ ] Que el usuario cree el proyecto en Supabase, corra `supabase/schema.sql` y pegue `.env`.
+- [ ] Commitear y pushear el estado actual (fix TS6133 ya corregido) y verificar el deploy en Vercel.
+- [ ] Borrar `public/LogoMPMLabs.png` (reemplazado por `LogoMPMLabs (2).png`).
+- [ ] Tests de los componentes/páginas: `Clientes`, `Pautas`, `Cobros`, `Dashboard` con
+      MSW + `@testing-library/user-event`.
+- [ ] Tests E2E con Playwright (flujos completos: alta cliente → pauta → cobro → WhatsApp).
+- [ ] Tests de `generarDatosDemo` (integración contra un Supabase local o MSW).
 - [ ] Conectar a un backend real ya provisto por el usuario (si cambia de Supabase).
-- [ ] (Opcional) Botón de WhatsApp con teléfono real del cliente (hoy toma el del cliente)
-      y número de emisor/configurable.
+- [ ] (Opcional) Número de emisor/configurable en WhatsApp (hoy usa el teléfono del cliente).
 - [ ] (Opcional) Edición completa de pautas/cobros (hoy alta + cambio de estado + borrado).
 
 ### Configuración de producción (Supabase + Vercel) — 2026-09-01
@@ -207,8 +216,92 @@ de fast-refresh). Build a `dist/` correcto (98 módulos).
 - **Configuración requerida en Vercel:** variables `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`
   (sin `VITE_SEED_ENABLED` en producción).
 
+**FASE 2 — Estados de cobro coherentes (completada) — 2026-09-01**
+- **Regla de negocio:** la pauta es un plan **mensual recurrente** que **nunca se finaliza**.
+  Se cobra del 1 al 10 de cada mes; desde el día 11 queda vencida hasta que se pague el mes.
+- **Modelo de estado elegido por el usuario — "vencimiento acumulativo":** cada mes desde
+  `fecha_inicio` genera un vencimiento propio; si un mes pasado quedó sin cobro aprobado, la
+  pauta queda **vencida** (aunque el mes actual esté pago o esté en los primeros 10 días).
+- **Nuevos helpers en `src/lib/utils.ts`:**
+  - `mesesEntre(desde, hasta)` (privado) y `mesesImpagos(pauta, cobros)` → cantidad de meses
+    vencidos sin pago aprobado.
+  - `montoAdeudado(pauta, cobros)` → `mesesImpagos × monto_total`.
+  - `diasDeAtraso(pauta, cobros)` → días desde el día 10 del mes impago más reciente.
+  - `estadoPautaMensual(pauta, cobros)` → `al_dia | pendiente | vencida` (acumulativo).
+  - `estadoCobroEfectivo(cobro)` → estado real del cobro (acepta `fecha_vencimiento`).
+  - `hoyISO()` → fecha local (no UTC) para comparaciones.
+- Aplicado en `Dashboard.tsx`, `Pautas.tsx`, `Cobros.tsx`.
+  - `Pautas.tsx`: columna **Total** muestra deuda acumulada en rojo con desglose
+    (`$50.000 × N meses`) cuando hay meses impagos.
+  - `Dashboard.tsx`: KPI **Vencidos** suma `montoAdeudado` de pautas vencidas; semáforo
+    rediseñado a nivel de **pauta** (`SemaforoCobros`), vencidas primero, con días de atraso,
+    monto adeudado y botón WhatsApp (label "Cobrar"/"Recordar").
+  - Mensaje de WhatsApp por pauta mensual (`MensajePautaMensual`) con monto acumulado y atraso.
+
+**FASE 3 — Informes + impresión (completada) — 2026-09-01**
+- Nueva página **`/informes`** (`src/pages/Informes.tsx`) con tres tipos de informe:
+  - **Ingresos** (mensual / anual / por intervalo con fechas).
+  - **Pagos por cliente** (acumulado aprobado).
+  - **Pagos por campaña** (acumulado aprobado).
+- Lógica pura en `src/lib/reportes.ts`: `filtrarPorRango`, `ingresosPorPeriodo`,
+  `pagosPorCliente`, `pagosPorCampana`, `totalIngresos` (solo cobros aprobados → ingresos reales).
+- **Impresión / PDF:** botón "Imprimir / PDF" (`window.print()`), encabezado solo-impresión con
+  nombre de la radio + fecha de generación + tipo + descripción de periodo, y CSS `@media print`
+  en `src/index.css` (oculta header/sidebar/nav, quita `lg:pl-64`, máxima anchura 100%).
+- Ruta agregada en `App.tsx` e ítem **Informes** en el `Sidebar`.
+
+**FASE 4 — Branding de la empresa (completada) — 2026-09-01**
+- Logo de **MPM Labs** (software) en el sidebar, debajo de "102.3 FM · Argentina", **centrado**
+  y más grande (`h-10`), con línea separadora sutil.
+- Imagen `public/LogoMPMLabs%20(2).png` (referida URL-encoded). El archivo viejo
+  `public/LogoMPMLabs.png` quedó sin uso (borrar).
+- Texto "© 2026 MPM Labs · Todos los derechos reservados" centrado, con **"MPM Labs" enlazado**
+  a `https://www.mpmlabs.com.ar` (nueva pestaña, subrayado al pasar el mouse).
+- Test `AppShell.test.tsx` (logo, copyright y "102.3 FM · Argentina").
+
+**Verificación (2026-09-01):** suite **95/95 tests en 10 archivos** · `npm run build` OK ·
+`npm run lint` 0 errores (1 warning fast-refresh).
+- Fix deploy Vercel: `TS6133 'content' is declared but its value is never read` en
+  `AppShell.test.tsx` (el parámetro del matcher de `getByText` se reemplazó por `_content`).
+  Ojo: `tsc -b` compila los `.test.tsx`, así que los tests deben pasar typecheck.
+
+**FASE 5 — Recibos autoincremental + PDF no fiscal (completada) — 2026-09-04**
+- **Numeración de recibos automática tipo talonario:** formato `006-0000100`
+  (punto de venta `006` + correlativo de 7 dígitos). El primer recibo es `006-0000100`
+  y después `006-0000101`, etc. El operador ya **no carga el n° de recibo** (se quitó
+  el campo del alta de cobro).
+- **Implementación en DB (Supabase):** `supabase/schema.sql`:
+  - Secuencia global `public.recibo_nro_seq` que arranca en `100`.
+  - Trigger `cobros_asignar_nro_recibo` (`before insert or update of estado`) que
+    asigna `'006-' || lpad(nextval(...),7,'0')` **solo cuando el cobro queda
+    "aprobado"** y `nro_recibo` es null → un cobro pendiente nunca consume número.
+  - Índice único parcial `uq_cobros_nro_recibo` (evita recibos duplicados).
+  - ⚠️ **Acción requerida:** pegar `supabase/schema.sql` en el SQL Editor (es
+    idempotente). Los cobros ya aprobados sin número conservan null hasta que se
+    re-aprueban o se crean nuevos.
+- **Recibo No Fiscal en PDF** (`src/lib/recibo.ts`, con `pdf-lib`):
+  - `generarPDFReciboNoFiscal(datos)` → bytes PDF A4 con encabezado azul de la radio,
+    n° de recibo, fecha, cliente/CUIT/teléfono, detalle del pago (concepto + período +
+    método), total, leyenda "Documento no fiscal" y firma.
+  - `datosReciboDeCobro(cobro)` mapea el cobro; `periodoDe`; `nombreArchivoRecibo`
+    (nombre seguro); `descargarPDF`; `compartirODescargarRecibo` → en móviles usa la
+    Web Share API (permite adjuntar el PDF a WhatsApp); en desktop descarga el archivo.
+  - `pdf-lib` se importa con **dynamic import** → queda en chunk separado y no infla
+    el bundle inicial (vite build sin warning de chunk > 500 kB).
+- **UI:** botón **"Recibo PDF"** en la tabla de Cobros (solo cobros aprobados con
+  n° asignado); el resto mantiene "Recordar" (texto) + "Marcar aprobado". En el alta
+  de cobro ahora se muestra el aviso de numeración automática. Se trae el `cuit` del
+  cliente en `listarCobrosConPauta` (join + tipos `CobroConPauta`).
+- **Tests:** `src/lib/recibo.test.ts` (9) + `src/components/ui/ReciboPDF.test.tsx` (3).
+  Suite total **108/108 tests en 12 archivos** · `npm run lint` 0 errores · `npm run build` OK.
+- **Nota WhatsApp:** `wa.me` solo envía texto; el PDF se envía por el share del sistema
+  (WhatsApp Business API/Cloud API sería el único camino para adjuntarlo 100% automático).
+
 ### Notas de implementación
 - El seed de datos de ejemplo se hace **desde el cliente** (inserts con RLS) en
+  `src/lib/api.ts → generarDatosDemo(userId)`, porque la función RPC `security definer`
+  `seed_demo_data` devolvía 400 con la nueva key `sb_publishable_`. La función RPC quedó
+  en `schema.sql` como opcional/compatibilidad.
   `src/lib/api.ts → generarDatosDemo(userId)`, porque la función RPC `security definer`
   `seed_demo_data` devolvía 400 con la nueva key `sb_publishable_`. La función RPC quedó
   en `schema.sql` como opcional/compatibilidad.

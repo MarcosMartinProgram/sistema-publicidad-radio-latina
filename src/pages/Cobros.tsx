@@ -8,6 +8,7 @@ import { Input, Select } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Feedback";
 import { WhatsAppButton, RecordatorioMsg } from "@/components/ui/WhatsApp";
+import { ReciboPDFButton } from "@/components/ui/ReciboPDF";
 import {
   listarPautasConCliente,
   listarCobrosConPauta,
@@ -25,7 +26,6 @@ interface FormState {
   fecha_pago: string;
   fecha_vencimiento: string;
   estado: Cobro["estado"];
-  nro_recibo: string;
   nota: string;
 }
 
@@ -42,7 +42,6 @@ export function Cobros() {
     fecha_pago: hoyISO(),
     fecha_vencimiento: sumarDias(hoyISO(), 30),
     estado: "aprobado",
-    nro_recibo: "",
     nota: "",
   });
   const [saving, setSaving] = useState(false);
@@ -71,7 +70,6 @@ export function Cobros() {
       fecha_pago: hoyISO(),
       fecha_vencimiento: sumarDias(hoyISO(), 30),
       estado: "aprobado",
-      nro_recibo: "",
       nota: "",
     });
     setError(null);
@@ -93,9 +91,9 @@ export function Cobros() {
         metodo: form.metodo,
         fecha_pago: form.fecha_pago,
         fecha_vencimiento: form.fecha_vencimiento,
-        estado: form.estado,
-        nro_recibo: form.nro_recibo.trim() || null,
-        nota: form.nota.trim() || null,
+estado: form.estado,
+      nro_recibo: null,
+      nota: form.nota.trim() || null,
       });
       await cargar();
       setModalOpen(false);
@@ -183,20 +181,24 @@ export function Cobros() {
                 const estado = estadoCobroEfectivo(c);
                 return (
                   <div className="flex justify-end gap-1">
-                    <WhatsAppButton
-                      telefono={cliente?.telefono ?? ""}
-                      mensaje={RecordatorioMsg({
-                        cliente: cliente?.nombre ?? "el cliente",
-                        monto: formatAR$(Number(c.monto)),
-                        pauta: pauta?.nombre ?? "tu pauta",
-                      })}
-                      label="Recordar"
-                    />
-                    {estado !== "aprobado" ? (
-                      <Button variant="ghost" size="sm" onClick={() => cambiarEstado(c, "aprobado")}>
-                        Marcar aprobado
-                      </Button>
-                    ) : null}
+                    {estado === "aprobado" ? (
+                      <ReciboPDFButton cobro={c as CobroConPauta} />
+                    ) : (
+                      <>
+                        <WhatsAppButton
+                          telefono={cliente?.telefono ?? ""}
+                          mensaje={RecordatorioMsg({
+                            cliente: cliente?.nombre ?? "el cliente",
+                            monto: formatAR$(Number(c.monto)),
+                            pauta: pauta?.nombre ?? "tu pauta",
+                          })}
+                          label="Recordar"
+                        />
+                        <Button variant="ghost" size="sm" onClick={() => cambiarEstado(c, "aprobado")}>
+                          Marcar aprobado
+                        </Button>
+                      </>
+                    )}
                     <Button variant="ghost" size="sm" className="text-danger-600" onClick={() => borrar(c)}>
                       Borrar
                     </Button>
@@ -288,22 +290,21 @@ export function Cobros() {
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Input
-              label="N° de recibo"
-              id="recibo"
-              value={form.nro_recibo}
-              onChange={(e) => setForm({ ...form, nro_recibo: e.target.value })}
-              placeholder="R-0001"
-            />
-            <Input
-              label="Nota"
-              id="nota"
-              value={form.nota}
-              onChange={(e) => setForm({ ...form, nota: e.target.value })}
-              placeholder="Observación"
-            />
+          <div className="rounded-md bg-surface-container-low px-4 py-3">
+            <p className="text-body-sm text-on-surface-variant">
+              El n° de recibo se genera automáticamente al aprobar el cobro:{" "}
+              <span className="font-semibold text-primary">006-0000100</span>,{" "}
+              <span className="font-semibold text-primary">006-0000101</span>, etc.
+            </p>
           </div>
+
+          <Input
+            label="Nota"
+            id="nota"
+            value={form.nota}
+            onChange={(e) => setForm({ ...form, nota: e.target.value })}
+            placeholder="Observación"
+          />
 
           {error && <p className="text-body-sm text-danger-600">{error}</p>}
         </div>

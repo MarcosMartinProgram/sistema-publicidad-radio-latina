@@ -166,7 +166,7 @@ export type PautaConCliente = Pauta & { clientes: Pick<Cliente, "nombre" | "tele
 export type CobroConPauta = Cobro & {
   pautas:
     | (Pick<Pauta, "nombre"> & {
-        clientes: Pick<Cliente, "nombre" | "telefono"> | null;
+        clientes: Pick<Cliente, "nombre" | "telefono" | "cuit"> | null;
       })
     | null;
 };

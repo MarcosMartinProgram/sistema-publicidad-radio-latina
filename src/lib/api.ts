@@ -15,7 +15,7 @@ export function listarPautasConCliente() {
 export function listarCobrosConPauta() {
   return supabase
     .from("cobros")
-    .select("*, pautas(nombre, clientes(nombre, telefono))")
+    .select("*, pautas(nombre, clientes(nombre, telefono, cuit))")
     .order("created_at", { ascending: false });
 }
 
