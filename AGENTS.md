@@ -103,6 +103,35 @@ Seed opcional protegido.
 - Copiar `.env.example` → `.env` y pegar URL + anon key.
 - `npm run dev`
 
+> **Supabase SQL Editor:** el aviso *"This query includes destructive operations"* es **esperado
+> y seguro** de ignorar. El schema usa `drop ... if exists` + `create or replace`
+> (idempotente) y **no borra tablas ni datos**. Los únicos `delete from` viven dentro de
+> `seed_demo_data()` (RPC) y solo corren si alguien invoca esa función.
+
+### Despliegue en Vercel (regla permanente de git)
+- Vercel mapea el **autor del commit** (`git user.name` + `git user.email`) contra la cuenta de
+  Vercel. Si el email no está vinculado, el deploy igual ocurre pero aparece
+  **"Usuario de Vercel no encontrado"** y puede no auto-redeployar.
+- **Siempre commitear con esta identidad en este repo:**
+  ```sh
+  git config user.name  "Programa MarcosMartin"
+  git config user.email "martinmarcospablo@gmail.com"
+  ```
+- ⚠️ **No usar** el email anónimo de GitHub (`marcosm@users.noreply.github.com`): Vercel no lo
+  puede asociar a ninguna cuenta.
+- **Si ya se commitó con un email no vinculado:** arreglar con un commit **nuevo** (no `--amend`):
+  ```sh
+  git config user.name  "Programa MarcosMartin"
+  git config user.email "martinmarcospablo@gmail.com"
+  git commit --allow-empty -m "redeploy: autor vinculado a Vercel"
+  git push
+  ```
+- **Forzar redeploy sin tocar código:** (a) Dashboard Vercel → **Deployments** → "⋯" → **Redeploy**;
+  (b) commit vacío + push (si el GitHub integration tiene auto-deploy); o
+  (c) `vercel --prod` (CLI v56+, requiere `vercel login` y proyecto linkeado).
+- Cuando no se aplica un cambio de código que la UI ya contempla (p. ej. campo que "no aparece"),
+  primero descartar **build viejo**: reiniciar `npm run dev` o verificar que Vercel redeployó.
+
 ## 7. Comandos útiles
 - `npm run dev` — servidor local (puerto 5173)
 - `npm run build` — typecheck (`tsc -b`) + build (`vite build`)
@@ -297,11 +326,20 @@ de fast-refresh). Build a `dist/` correcto (98 módulos).
 - **Nota WhatsApp:** `wa.me` solo envía texto; el PDF se envía por el share del sistema
   (WhatsApp Business API/Cloud API sería el único camino para adjuntarlo 100% automático).
 
+**Post-FASE 5 — Despliegue Vercel: autor de commit (2026-09-04)**
+- Problema: Vercel mostraba **"Usuario de Vercel no encontrado"** y no auto-redeployaba el último
+  commit, porque los commits salían con el email anónimo de GitHub
+  (`marcosm@users.noreply.github.com`), no vinculado a la cuenta de Vercel.
+- Diagnóstico adicional: la app desplegada seguía mostrando el campo viejo "N° de recibo" y el
+  botón "Recibo PDF" no aparecía → era un **build viejo** (Vercel sin redeploy + `schema.sql` sin
+  correr en Supabase → los cobros no tenían `nro_recibo`).
+- Fix: reconfigurar identidad y forzar redeploy con commit nuevo:
+  `git config user.name "Programa MarcosMartin"` / `user.email "martinmarcospablo@gmail.com"` +
+  `git commit --allow-empty -m "redeploy: commit con autor vinculado a Vercel"` + `git push`.
+- Regla permanente documentada en §6 → **Despliegue en Vercel**.
+
 ### Notas de implementación
 - El seed de datos de ejemplo se hace **desde el cliente** (inserts con RLS) en
-  `src/lib/api.ts → generarDatosDemo(userId)`, porque la función RPC `security definer`
-  `seed_demo_data` devolvía 400 con la nueva key `sb_publishable_`. La función RPC quedó
-  en `schema.sql` como opcional/compatibilidad.
   `src/lib/api.ts → generarDatosDemo(userId)`, porque la función RPC `security definer`
   `seed_demo_data` devolvía 400 con la nueva key `sb_publishable_`. La función RPC quedó
   en `schema.sql` como opcional/compatibilidad.
